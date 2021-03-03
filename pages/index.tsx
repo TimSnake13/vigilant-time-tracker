@@ -1,6 +1,6 @@
 import Head from "next/head";
 import React from "react";
-import Timer from "../src/components/Timer";
+import TasksTracker from "../src/components/TasksTracker";
 import styles from "../styles/Home.module.css";
 
 export default function Home() {
@@ -16,11 +16,7 @@ export default function Home() {
           Welcome to <a href="https://nextjs.org">Next.js!</a>
         </h1>
 
-        <p className={styles.description}>
-          Get started by editing{" "}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
-        <Timer />
+        <TasksTracker />
       </main>
 
       <footer className={styles.footer}></footer>
