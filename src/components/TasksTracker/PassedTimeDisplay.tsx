@@ -18,11 +18,13 @@ const PassedTimeDisplay = ({ passedTime }: Props) => {
   //     }
   //   }, [passedSec]);
   return (
-    <div>
-      Time Passed:{" "}
-      {passedTime.map((v, i) => (
-        <div key={i}>{v}:</div>
-      ))}
+    <div className="flex ">
+      <div className="mr-2">Time Passed:</div>
+      <div>
+        {passedTime[0] > 0 && <label>{passedTime[0]} h </label>}
+        {passedTime[1] > 0 && <label>{passedTime[1]} m </label>}
+        {passedTime[2] !== null && <label>{passedTime[2]} s</label>}
+      </div>
     </div>
   );
 };

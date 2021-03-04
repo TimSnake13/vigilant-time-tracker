@@ -7,8 +7,8 @@ interface Props {
 
 const ClockDisplay = ({ currentDate, currentTime }: Props) => {
   return (
-    <div>
-      <div>{currentDate}</div>
+    <div className="flex items-center content-center">
+      <div className="mr-2">{currentDate}</div>
       <div>{currentTime}</div>
     </div>
   );

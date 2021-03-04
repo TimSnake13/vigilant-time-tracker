@@ -1,4 +1,24 @@
 @tailwind base;
+
+@layer base {
+  h1 {
+    @apply text-2xl;
+  }
+  h2 {
+    @apply text-xl;
+  }
+  h3 {
+    @apply text-lg;
+  }
+  a {
+    @apply text-blue-600 underline;
+  }
+  button {
+    outline: 1px solid;
+    @apply px-2 py-1;
+  }
+}
+
 @tailwind components;
 @tailwind utilities;
 

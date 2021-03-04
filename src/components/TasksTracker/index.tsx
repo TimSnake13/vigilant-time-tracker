@@ -5,9 +5,12 @@ import Task, { Moment } from "./types";
 import TasksDisplay from "./TasksDisplay";
 import useInterval from "../../hooks/useInterval";
 import PassedTimeDisplay from "./PassedTimeDisplay";
+import CategoriesDisplay from "./CategoriesDisplay";
+import AddCategory from "./AddCategory";
 
 /** Do NOT change this format! Used in class Moment in types.ts */
-const FORMAT_STYLE = "YYYY-MM-DD HH:mm:ss A"; //
+const FORMAT_STYLE = "YYYY-MM-DD HH:mm:ss A";
+const LOCAL_STORAGE_KEY = "allTasks";
 
 const TasksTracker = () => {
   const inputRef = useRef<HTMLInputElement>();
@@ -16,17 +19,36 @@ const TasksTracker = () => {
   const [todaysTasks, setTodaysTasks] = useState<Task[]>([]);
   const [allTasks, setAllTasks] = useState({});
 
+  const [categories, setCategories] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState("");
+
   const [currentMoment, setCurrentMoment] = useState<Moment>();
   const [startMoment, setStartMoment] = useState<Moment>();
   const [passedTime, setPassedTime] = useState([0, 0, 0]);
 
   useInterval(() => {
-    const m = new Moment(moment().format(FORMAT_STYLE));
-    setCurrentMoment(m);
-    // if (m.time.split(":")[2] === "00")
-    calculatePassedTime();
+    try {
+      const m = new Moment(moment().format(FORMAT_STYLE));
+      setCurrentMoment(m);
+      // if (m.time.split(":")[2] === "00")
+      if (isStarted) calculatePassedTime();
+    } catch (e) {
+      console.error(e);
+    }
   }, 1000);
 
+  useEffect(() => {
+    const obj = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY));
+    if (obj) {
+      setAllTasks(obj);
+      const today = new Moment(moment().format(FORMAT_STYLE)).date;
+      if (today) setTodaysTasks(obj[today]);
+    }
+  }, []);
+
+  /**
+   * Update passedTime by using currentMoment.time & startMoment.time
+   */
   const calculatePassedTime = () => {
     if (currentMoment && startMoment) {
       const [cHour, cMin, cSec] = currentMoment.time.split(":").map(Number);
@@ -57,11 +79,16 @@ const TasksTracker = () => {
   const AddTodaysTask = () => {
     const newTask = new Task(
       inputRef.current.value,
+      "",
       startMoment,
       currentMoment,
       passedTime
     );
-    setTodaysTasks((arr) => [...arr, newTask]);
+    setTodaysTasks((arr) => {
+      const newTodaysTasks = [...arr, newTask];
+      saveTodaysTasks(newTodaysTasks); // Prevent race condition
+      return newTodaysTasks;
+    });
     setStartMoment(currentMoment);
     inputRef.current.value = "";
     saveTodaysTasks();
@@ -77,21 +104,25 @@ const TasksTracker = () => {
     });
   };
 
-  const saveTodaysTasks = () => {
+  const saveTodaysTasks = (_todaysTasks = todaysTasks) => {
     setAllTasks((tasks) => {
-      return { ...tasks, [currentMoment.date]: todaysTasks };
+      const newAllTasks = { ...tasks, [currentMoment.date]: _todaysTasks };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newAllTasks));
+      return newAllTasks;
     });
   };
 
   return (
     <div>
+      <ClockDisplay
+        currentDate={currentMoment?.date}
+        currentTime={currentMoment?.time}
+      />
       <button onClick={handleToggleIsStarted}>
         {isStarted ? "Stop" : "Start"}
       </button>
       <div>Start At: {startMoment?.time}</div>
-
       <PassedTimeDisplay passedTime={passedTime} />
-
       <div>
         <input ref={inputRef} placeholder="My finished task is?" />
         <button onClick={AddTodaysTask} disabled={!isStarted}>
@@ -99,10 +130,12 @@ const TasksTracker = () => {
         </button>
       </div>
 
-      <ClockDisplay
-        currentDate={currentMoment?.date}
-        currentTime={currentMoment?.time}
+      <CategoriesDisplay
+        categories={categories}
+        setSelectedCategory={setSelectedCategory}
       />
+      <AddCategory categories={categories} setCategories={setCategories} />
+
       <TasksDisplay tasks={todaysTasks} />
     </div>
   );

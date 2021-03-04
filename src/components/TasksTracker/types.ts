@@ -3,17 +3,20 @@ import { v4 as uuid } from "uuid";
 class Task {
   id: string;
   name: string;
+  category: string;
   startMoment: Moment;
   finishMoment: Moment;
   duration: number[];
   constructor(
     name: string,
+    category: string,
     startMoment: Moment,
     finishMoment: Moment,
     duration: number[]
   ) {
     this.id = uuid();
     this.name = name;
+    this.category = category;
     this.startMoment = startMoment;
     this.finishMoment = finishMoment;
     this.duration = duration;
