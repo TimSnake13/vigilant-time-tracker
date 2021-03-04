@@ -5,11 +5,18 @@ class Task {
   name: string;
   startMoment: Moment;
   finishMoment: Moment;
-  constructor(name: string, startMoment: Moment, finishMoment: Moment) {
+  duration: number[];
+  constructor(
+    name: string,
+    startMoment: Moment,
+    finishMoment: Moment,
+    duration: number[]
+  ) {
     this.id = uuid();
     this.name = name;
     this.startMoment = startMoment;
     this.finishMoment = finishMoment;
+    this.duration = duration;
   }
 }
 export default Task;
