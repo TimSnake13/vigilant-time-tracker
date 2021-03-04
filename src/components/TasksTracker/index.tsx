@@ -11,48 +11,31 @@ const FORMAT_STYLE = "YYYY-MM-DD HH:mm:ss A"; //
 
 const TasksTracker = () => {
   const inputRef = useRef<HTMLInputElement>();
-  const [isReady, setIsReady] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
 
   const [todaysTasks, setTodaysTasks] = useState<Task[]>([]);
-  const [allTasks, setAllTasks] = useState([]);
+  const [allTasks, setAllTasks] = useState({});
 
   const [currentMoment, setCurrentMoment] = useState<Moment>();
   const [startMoment, setStartMoment] = useState<Moment>();
   const [passedTime, setPassedTime] = useState([0, 0, 0]);
 
-  // Basic Clock:
-  // useEffect(() => {
-  //   let interval = null;
-  //   if (isActive) {
-  //     interval = setInterval(() => {
-  //     }, 1000);
-  //   } else {
-  //     clearTimeout(interval);
-  //   }
-  //   return () => {
-  //     clearTimeout(interval);
-  //   };
-  // }, [isActive]);
-
-  useEffect(() => {
-    setIsReady(true);
-  }, []);
-
   useInterval(() => {
     const m = new Moment(moment().format(FORMAT_STYLE));
     setCurrentMoment(m);
     // if (m.time.split(":")[2] === "00")
-    if (isReady) calculatePassedTime();
+    calculatePassedTime();
   }, 1000);
 
   const calculatePassedTime = () => {
     if (currentMoment && startMoment) {
-      // FIXME: If 23:00PM to 1:00AM the next day?
       const [cHour, cMin, cSec] = currentMoment.time.split(":").map(Number);
       const [sHour, sMin, sSec] = startMoment.time.split(":").map(Number);
 
       let h = cHour - sHour;
+      if (h < 0) {
+        h = 24 + h;
+      }
       let m = cMin - sMin;
       if (m < 0) {
         h -= 1;
@@ -68,18 +51,8 @@ const TasksTracker = () => {
     }
   };
 
-  // Test: Working but not great if you are using the app in the background
-  // const [passedSec, setPassedSec] = useState(0);
-  // useInterval(
-  //   () => {
-  //     setPassedSec(passedSec + 1);
-  //     // console.log(startMoment);
-  //   },
-  //   isStarted ? 1000 : null
-  // );
-
-  // TODO: 1. Button => trigger calculate pass time show on screen perfectly
-  // TODO: 2. task CRUD ops
+  // TODO: 1. task CRUD ops
+  // TODO: 2. localStorage
 
   const AddTodaysTask = () => {
     const newTask = new Task(
@@ -89,13 +62,12 @@ const TasksTracker = () => {
       passedTime
     );
     setTodaysTasks((arr) => [...arr, newTask]);
-    // setPassedSec(1);
     setStartMoment(currentMoment);
-    // setIsStarted(false)
     inputRef.current.value = "";
+    saveTodaysTasks();
   };
 
-  const toggleIsStarted = () => {
+  const handleToggleIsStarted = () => {
     setIsStarted((s) => {
       if (s === false) {
         // If starting:
@@ -105,9 +77,17 @@ const TasksTracker = () => {
     });
   };
 
+  const saveTodaysTasks = () => {
+    setAllTasks((tasks) => {
+      return { ...tasks, [currentMoment.date]: todaysTasks };
+    });
+  };
+
   return (
     <div>
-      <button onClick={toggleIsStarted}>{isStarted ? "Stop" : "Start"}</button>
+      <button onClick={handleToggleIsStarted}>
+        {isStarted ? "Stop" : "Start"}
+      </button>
       <div>Start At: {startMoment?.time}</div>
 
       <PassedTimeDisplay passedTime={passedTime} />
