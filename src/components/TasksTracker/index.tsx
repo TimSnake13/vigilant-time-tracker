@@ -5,7 +5,7 @@ import Task, { Moment } from "./types";
 import TasksDisplay from "./TasksDisplay";
 import useInterval from "../../hooks/useInterval";
 import PassedTimeDisplay from "./PassedTimeDisplay";
-import CategoriesDisplay from "./CategoriesDisplay";
+import CategoriesSelection from "./CategoriesSelection";
 import AddCategory from "./AddCategory";
 
 /** Do NOT change this format! Used in class Moment in types.ts */
@@ -19,7 +19,7 @@ const TasksTracker = () => {
   const [todaysTasks, setTodaysTasks] = useState<Task[]>([]);
   const [allTasks, setAllTasks] = useState({});
 
-  const [categories, setCategories] = useState({});
+  const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const [currentMoment, setCurrentMoment] = useState<Moment>();
@@ -42,7 +42,7 @@ const TasksTracker = () => {
     if (obj) {
       setAllTasks(obj);
       const today = new Moment(moment().format(FORMAT_STYLE)).date;
-      if (today) setTodaysTasks(obj[today]);
+      if (today && obj[today]) setTodaysTasks(obj[today]);
     }
   }, []);
 
@@ -73,26 +73,27 @@ const TasksTracker = () => {
     }
   };
 
-  // TODO: 1. task CRUD ops
-  // TODO: 2. localStorage
-
+  /**
+   * Add a Task to todaysTasks, update allTasks, reset startMoment & input field
+   */
   const AddTodaysTask = () => {
     const newTask = new Task(
       inputRef.current.value,
-      "",
+      selectedCategory,
       startMoment,
       currentMoment,
       passedTime
     );
     setTodaysTasks((arr) => {
       const newTodaysTasks = [...arr, newTask];
-      saveTodaysTasks(newTodaysTasks); // Prevent race condition
+      saveOneDayTasks({ dateAllTasks: newTodaysTasks }); // Prevent race condition
       return newTodaysTasks;
     });
     setStartMoment(currentMoment);
     inputRef.current.value = "";
-    saveTodaysTasks();
   };
+
+  // TODO: CRUD ops in tasks
 
   const handleToggleIsStarted = () => {
     setIsStarted((s) => {
@@ -104,12 +105,24 @@ const TasksTracker = () => {
     });
   };
 
-  const saveTodaysTasks = (_todaysTasks = todaysTasks) => {
+  interface saveOneDayTasksProps {
+    date?: string;
+    dateAllTasks?: Task[];
+  }
+
+  const saveOneDayTasks = ({
+    date = currentMoment.date,
+    dateAllTasks = todaysTasks,
+  }: saveOneDayTasksProps) => {
     setAllTasks((tasks) => {
-      const newAllTasks = { ...tasks, [currentMoment.date]: _todaysTasks };
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newAllTasks));
+      const newAllTasks = { ...tasks, [date]: dateAllTasks };
+      updateLocalStorageAllTasks(newAllTasks);
       return newAllTasks;
     });
+  };
+
+  const updateLocalStorageAllTasks = (newAllTasks) => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newAllTasks));
   };
 
   return (
@@ -123,19 +136,22 @@ const TasksTracker = () => {
       </button>
       <div>Start At: {startMoment?.time}</div>
       <PassedTimeDisplay passedTime={passedTime} />
+
+      <h2>Categories</h2>
+      <CategoriesSelection
+        categories={categories}
+        setCategories={setCategories}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+      />
+      <AddCategory categories={categories} setCategories={setCategories} />
+      <h2>My Tasks:</h2>
       <div>
         <input ref={inputRef} placeholder="My finished task is?" />
         <button onClick={AddTodaysTask} disabled={!isStarted}>
           +
         </button>
       </div>
-
-      <CategoriesDisplay
-        categories={categories}
-        setSelectedCategory={setSelectedCategory}
-      />
-      <AddCategory categories={categories} setCategories={setCategories} />
-
       <TasksDisplay tasks={todaysTasks} />
     </div>
   );

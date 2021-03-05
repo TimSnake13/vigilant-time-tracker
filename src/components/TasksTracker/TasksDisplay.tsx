@@ -10,8 +10,7 @@ const TasksDisplay = ({ tasks }: Props) => {
     <div>
       {tasks.map((task) => (
         <div key={task.id}>
-          {task.name} startedAt: {task.startMoment.time}
-          duration: {task.duration}
+          {task.name} {task.category}
         </div>
       ))}
     </div>
