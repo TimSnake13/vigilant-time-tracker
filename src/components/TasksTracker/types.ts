@@ -17,12 +17,13 @@ export class Activity {
   task: Task;
   startMoment: Moment;
   finishMoment: Moment;
-  duration: number[];
+  // duration: number[];
+  duration: number;
   constructor(
     task: Task,
     startMoment: Moment,
     finishMoment: Moment,
-    duration: number[]
+    duration: number
   ) {
     this.task = task;
     this.startMoment = startMoment;

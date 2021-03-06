@@ -2,21 +2,24 @@ import React, { useEffect, useRef, useState } from "react";
 import ClockDisplay from "../ClockDisplay";
 import moment from "moment";
 import { Moment, Task, Activity } from "./types";
-import TasksDisplay from "./TasksDisplay";
+import TasksDisplay from "./TasksDisplay/";
 import useInterval from "../../hooks/useInterval";
 import PassedTimeDisplay from "./PassedTimeDisplay";
 import CategoriesSelection from "./CategoriesSelection";
 import AddCategory from "./AddCategory";
 import DayVisualization from "./DayVisualization";
 
-interface UserData {
-  categories: string[];
-  allTasks: any;
-}
+const LOCAL_STORAGE_KEY = "USER_DATA";
+const START_TIMER_ON_RENDER = true;
 
 /** Do NOT change this format! Used in class Moment in types.ts */
 const FORMAT_STYLE = "YYYY-MM-DD HH:mm:ss A";
-const LOCAL_STORAGE_KEY = "USER_DATA";
+
+interface UserData {
+  startMoment: Moment;
+  categories: string[];
+  allActivities: any;
+}
 
 const TasksTracker = () => {
   const inputRef = useRef<HTMLInputElement>();
@@ -33,12 +36,13 @@ const TasksTracker = () => {
   const [currentMoment, setCurrentMoment] = useState<Moment>();
   const [startMoment, setStartMoment] = useState<Moment>();
   const [stopMoment, setStopMoment] = useState<Moment>();
-  const [passedTime, setPassedTime] = useState([0, 0, 0]);
+  // const [passedTime, setPassedTime] = useState([0, 0, 0]);
+  const [passedTime, setPassedTime] = useState(0); // In mins
+
+  const getCurrentMoment = () => new Moment(moment().format(FORMAT_STYLE));
 
   useInterval(() => {
-    const m = new Moment(moment().format(FORMAT_STYLE));
-    setCurrentMoment(m);
-    // if (m.time.split(":")[2] === "00")
+    setCurrentMoment(getCurrentMoment());
     if (isStarted) calculatePassedTime();
   }, 1000);
 
@@ -47,10 +51,27 @@ const TasksTracker = () => {
     const obj = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) as UserData;
     if (obj) {
       setCategories(obj.categories);
-      setAllActivities(obj.allTasks);
+      setAllActivities(obj.allActivities);
       const today = new Moment(moment().format(FORMAT_STYLE)).date;
-      if (today) setTodaysActivities(obj.allTasks[today] || []);
+      if (today && obj.allActivities[today])
+        setTodaysActivities(obj.allActivities[today]);
+      if (obj.startMoment) {
+        setStartMoment(obj.startMoment);
+      } else {
+        setStartMoment(getCurrentMoment());
+      }
     }
+
+    if (START_TIMER_ON_RENDER) {
+      setIsStarted(true);
+      if (!startMoment) {
+        setStartMoment(getCurrentMoment());
+      }
+    }
+    return () => {
+      // Save before unmounted
+      // updateDataInLocalStorage({ startMoment, categories, allActivities });
+    };
   }, []);
 
   useEffect(() => {
@@ -59,6 +80,7 @@ const TasksTracker = () => {
     } else {
       setStopMoment(null);
     }
+    // updateDataInLocalStorage({ startMoment, categories, allActivities });
   }, [isStarted]);
 
   /**
@@ -84,32 +106,11 @@ const TasksTracker = () => {
         s = 60 + s;
       }
 
-      setPassedTime([h, m, s]);
+      // setPassedTime([h, m, s]);
+      const t = h * 60 + m;
+      setPassedTime(t);
     }
   };
-
-  /**
-   * Using a Task to add an Activity to todaysActivities,
-   * update allActivities, reset startMoment & input field
-   */
-  const AddTodaysActivity = () => {
-    // TODO: check user have selected or create a task
-    const newTask = new Task(inputRef.current.value, selectedCategory);
-    const newActivity = new Activity(
-      newTask,
-      startMoment,
-      currentMoment,
-      passedTime
-    );
-    setTodaysActivities((arr) => {
-      const newTodaysActivities = [...arr, newActivity];
-      saveOneDayActivities({ dateAllTasks: newTodaysActivities }); // Prevent race condition
-      return newTodaysActivities;
-    });
-    setStartMoment(currentMoment);
-    inputRef.current.value = "";
-  };
-
   // TODO: CRUD ops in tasks
 
   const handleToggleIsStarted = () => {
@@ -125,34 +126,66 @@ const TasksTracker = () => {
   const addCategory = (name: string) => {
     if (name) {
       if (categories.indexOf(name) < 0) {
-        setCategories((s) => [...s, name]);
-        setSelectedCategory(name);
-        updateDataInLocalStorage({
-          categories: categories,
-          allTasks: allActivities,
+        setCategories((s) => {
+          const newCategories = [...s, name];
+          updateDataInLocalStorage({
+            startMoment,
+            categories: newCategories,
+            allActivities,
+          });
+          return newCategories;
         });
+        setSelectedCategory(name);
       } else {
         console.warn("Repeated category, skip add");
       }
     }
   };
 
+  /**
+   * Using a Task to add an Activity to todaysActivities,
+   * update allActivities, reset startMoment & input field
+   */
+  const AddTodaysActivity = () => {
+    // TODO: check user have selected or create a task
+    const newTask = new Task(inputRef.current.value, selectedCategory);
+    const newActivity = new Activity(
+      newTask,
+      startMoment,
+      stopMoment,
+      passedTime
+    );
+    setTodaysActivities((arr) => {
+      const newTodaysActivities = [...arr, newActivity];
+      saveOneDayActivities({
+        dateAllTasks: newTodaysActivities,
+        userData: { startMoment: currentMoment, categories, allActivities },
+      }); // Prevent race condition
+      return newTodaysActivities;
+    });
+    setStartMoment(currentMoment);
+    inputRef.current.value = "";
+  };
+
   interface saveOneDayActivitiesProps {
     date?: string;
     dateAllTasks?: Activity[];
+    userData: UserData;
   }
 
   const saveOneDayActivities = ({
     date = currentMoment.date,
     dateAllTasks = todaysActivities,
+    userData,
   }: saveOneDayActivitiesProps) => {
     setAllActivities((tasks) => {
-      const newAllTasks = { ...tasks, [date]: dateAllTasks };
+      const newAllActivities = { ...tasks, [date]: dateAllTasks };
       updateDataInLocalStorage({
-        categories: categories,
-        allTasks: newAllTasks,
+        startMoment: userData.startMoment,
+        categories: userData.categories,
+        allActivities: newAllActivities,
       });
-      return newAllTasks;
+      return newAllActivities;
     });
   };
 
@@ -169,6 +202,13 @@ const TasksTracker = () => {
       <button onClick={handleToggleIsStarted}>
         {isStarted ? "Stop" : "Start"}
       </button>
+      <button
+        onClick={() =>
+          updateDataInLocalStorage({ startMoment, categories, allActivities })
+        }
+      >
+        Dev: Save data to LS
+      </button>
       <div>Start At: {startMoment?.time}</div>
       <PassedTimeDisplay passedTime={passedTime} />
 
@@ -183,7 +223,10 @@ const TasksTracker = () => {
       <h2>My Activities:</h2>
       <div>
         <input ref={inputRef} placeholder="My finished task is?" />
-        <button onClick={AddTodaysActivity} disabled={!isStarted}>
+        <button
+          onClick={AddTodaysActivity}
+          disabled={!isStarted || stopMoment !== null}
+        >
           +
         </button>
       </div>
