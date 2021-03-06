@@ -1,26 +1,18 @@
 import React, { useRef } from "react";
 
 interface Props {
-  categories: string[];
-  setCategories: React.Dispatch<React.SetStateAction<string[]>>;
+  addCategory: (name: string) => void;
 }
 
-const AddCategory = ({ categories, setCategories }: Props) => {
+const AddCategory = ({ addCategory }: Props) => {
   const inputRef = useRef<HTMLInputElement>();
-  const addCategory = () => {
-    const newCategory = inputRef.current.value;
-    if (newCategory) {
-      if (categories.indexOf(newCategory) < 0) {
-        setCategories((s) => [...s, newCategory]);
-      } else {
-        console.warn("Repeated category, skip add");
-      }
-    }
+  const handleAddCategory = () => {
+    if (inputRef.current.value) addCategory(inputRef.current.value);
   };
   return (
     <div>
       <input ref={inputRef} placeholder="Add Category" />
-      <button onClick={addCategory}>Add</button>
+      <button onClick={handleAddCategory}>Add</button>
     </div>
   );
 };

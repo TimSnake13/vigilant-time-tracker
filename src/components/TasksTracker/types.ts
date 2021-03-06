@@ -1,28 +1,35 @@
 import { v4 as uuid } from "uuid";
 
-class Task {
+export class Task {
   id: string;
   name: string;
   category: string;
+  description?: string;
+  constructor(name: string, category: string, description?: string) {
+    this.id = uuid();
+    this.name = name;
+    this.category = category;
+    this.description = description || "";
+  }
+}
+
+export class Activity {
+  task: Task;
   startMoment: Moment;
   finishMoment: Moment;
   duration: number[];
   constructor(
-    name: string,
-    category: string,
+    task: Task,
     startMoment: Moment,
     finishMoment: Moment,
     duration: number[]
   ) {
-    this.id = uuid();
-    this.name = name;
-    this.category = category;
+    this.task = task;
     this.startMoment = startMoment;
     this.finishMoment = finishMoment;
     this.duration = duration;
   }
 }
-export default Task;
 
 /**
  * When initializing, it needs the input: moment().format("YYYY-MM-DD HH:mm:ss A") to work properly

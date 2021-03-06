@@ -1,50 +1,65 @@
 import React, { useEffect, useRef, useState } from "react";
 import ClockDisplay from "../ClockDisplay";
 import moment from "moment";
-import Task, { Moment } from "./types";
+import { Moment, Task, Activity } from "./types";
 import TasksDisplay from "./TasksDisplay";
 import useInterval from "../../hooks/useInterval";
 import PassedTimeDisplay from "./PassedTimeDisplay";
 import CategoriesSelection from "./CategoriesSelection";
 import AddCategory from "./AddCategory";
+import DayVisualization from "./DayVisualization";
+
+interface UserData {
+  categories: string[];
+  allTasks: any;
+}
 
 /** Do NOT change this format! Used in class Moment in types.ts */
 const FORMAT_STYLE = "YYYY-MM-DD HH:mm:ss A";
-const LOCAL_STORAGE_KEY = "allTasks";
+const LOCAL_STORAGE_KEY = "USER_DATA";
 
 const TasksTracker = () => {
   const inputRef = useRef<HTMLInputElement>();
   const [isStarted, setIsStarted] = useState(false);
 
-  const [todaysTasks, setTodaysTasks] = useState<Task[]>([]);
-  const [allTasks, setAllTasks] = useState({});
+  const [todaysActivities, setTodaysActivities] = useState<Activity[]>([]);
+  const [allActivities, setAllActivities] = useState<
+    Record<string, Activity[]>
+  >({});
 
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const [currentMoment, setCurrentMoment] = useState<Moment>();
   const [startMoment, setStartMoment] = useState<Moment>();
+  const [stopMoment, setStopMoment] = useState<Moment>();
   const [passedTime, setPassedTime] = useState([0, 0, 0]);
 
   useInterval(() => {
-    try {
-      const m = new Moment(moment().format(FORMAT_STYLE));
-      setCurrentMoment(m);
-      // if (m.time.split(":")[2] === "00")
-      if (isStarted) calculatePassedTime();
-    } catch (e) {
-      console.error(e);
-    }
+    const m = new Moment(moment().format(FORMAT_STYLE));
+    setCurrentMoment(m);
+    // if (m.time.split(":")[2] === "00")
+    if (isStarted) calculatePassedTime();
   }, 1000);
 
+  // Load data from localStorage
   useEffect(() => {
-    const obj = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY));
+    const obj = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) as UserData;
     if (obj) {
-      setAllTasks(obj);
+      setCategories(obj.categories);
+      setAllActivities(obj.allTasks);
       const today = new Moment(moment().format(FORMAT_STYLE)).date;
-      if (today && obj[today]) setTodaysTasks(obj[today]);
+      if (today) setTodaysActivities(obj.allTasks[today] || []);
     }
   }, []);
+
+  useEffect(() => {
+    if (isStarted === false) {
+      setStopMoment(currentMoment);
+    } else {
+      setStopMoment(null);
+    }
+  }, [isStarted]);
 
   /**
    * Update passedTime by using currentMoment.time & startMoment.time
@@ -74,20 +89,22 @@ const TasksTracker = () => {
   };
 
   /**
-   * Add a Task to todaysTasks, update allTasks, reset startMoment & input field
+   * Using a Task to add an Activity to todaysActivities,
+   * update allActivities, reset startMoment & input field
    */
-  const AddTodaysTask = () => {
-    const newTask = new Task(
-      inputRef.current.value,
-      selectedCategory,
+  const AddTodaysActivity = () => {
+    // TODO: check user have selected or create a task
+    const newTask = new Task(inputRef.current.value, selectedCategory);
+    const newActivity = new Activity(
+      newTask,
       startMoment,
       currentMoment,
       passedTime
     );
-    setTodaysTasks((arr) => {
-      const newTodaysTasks = [...arr, newTask];
-      saveOneDayTasks({ dateAllTasks: newTodaysTasks }); // Prevent race condition
-      return newTodaysTasks;
+    setTodaysActivities((arr) => {
+      const newTodaysActivities = [...arr, newActivity];
+      saveOneDayActivities({ dateAllTasks: newTodaysActivities }); // Prevent race condition
+      return newTodaysActivities;
     });
     setStartMoment(currentMoment);
     inputRef.current.value = "";
@@ -105,24 +122,42 @@ const TasksTracker = () => {
     });
   };
 
-  interface saveOneDayTasksProps {
+  const addCategory = (name: string) => {
+    if (name) {
+      if (categories.indexOf(name) < 0) {
+        setCategories((s) => [...s, name]);
+        setSelectedCategory(name);
+        updateDataInLocalStorage({
+          categories: categories,
+          allTasks: allActivities,
+        });
+      } else {
+        console.warn("Repeated category, skip add");
+      }
+    }
+  };
+
+  interface saveOneDayActivitiesProps {
     date?: string;
-    dateAllTasks?: Task[];
+    dateAllTasks?: Activity[];
   }
 
-  const saveOneDayTasks = ({
+  const saveOneDayActivities = ({
     date = currentMoment.date,
-    dateAllTasks = todaysTasks,
-  }: saveOneDayTasksProps) => {
-    setAllTasks((tasks) => {
+    dateAllTasks = todaysActivities,
+  }: saveOneDayActivitiesProps) => {
+    setAllActivities((tasks) => {
       const newAllTasks = { ...tasks, [date]: dateAllTasks };
-      updateLocalStorageAllTasks(newAllTasks);
+      updateDataInLocalStorage({
+        categories: categories,
+        allTasks: newAllTasks,
+      });
       return newAllTasks;
     });
   };
 
-  const updateLocalStorageAllTasks = (newAllTasks) => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newAllTasks));
+  const updateDataInLocalStorage = (userData: UserData) => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userData));
   };
 
   return (
@@ -144,15 +179,16 @@ const TasksTracker = () => {
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
       />
-      <AddCategory categories={categories} setCategories={setCategories} />
-      <h2>My Tasks:</h2>
+      <AddCategory addCategory={addCategory} />
+      <h2>My Activities:</h2>
       <div>
         <input ref={inputRef} placeholder="My finished task is?" />
-        <button onClick={AddTodaysTask} disabled={!isStarted}>
+        <button onClick={AddTodaysActivity} disabled={!isStarted}>
           +
         </button>
       </div>
-      <TasksDisplay tasks={todaysTasks} />
+      <TasksDisplay activities={todaysActivities} />
+      <DayVisualization />
     </div>
   );
 };

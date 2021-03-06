@@ -1,18 +1,19 @@
 import React from "react";
-import Task from "./types";
+import { Activity } from "./types";
 
 interface Props {
-  tasks: Task[];
+  activities: Activity[];
 }
 
-const TasksDisplay = ({ tasks }: Props) => {
+const TasksDisplay = ({ activities }: Props) => {
   return (
     <div>
-      {tasks.map((task) => (
-        <div key={task.id}>
-          {task.name} {task.category}
-        </div>
-      ))}
+      {activities &&
+        activities.map((activity) => (
+          <div key={activity.task.id}>
+            {activity.task.name} {activity.task.category}
+          </div>
+        ))}
     </div>
   );
 };
