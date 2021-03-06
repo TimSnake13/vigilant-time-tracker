@@ -15,7 +15,8 @@
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "tailwindcss": "^2.0.3",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "victory": "^35.4.11"
   },
   "devDependencies": {
     "@types/node": "^14.14.31",
