@@ -6,20 +6,16 @@ const selectedStyle = "";
 interface Props {
   currentTaskID: string;
   setCurrentTaskID: React.Dispatch<React.SetStateAction<string>>;
-  allTasks: Record<string, Task>;
+  tasks: Record<string, Task>;
 }
 
-const TaskSelection = ({
-  currentTaskID,
-  setCurrentTaskID,
-  allTasks,
-}: Props) => {
+const TaskSelection = ({ currentTaskID, setCurrentTaskID, tasks }: Props) => {
   const handleCurrentTaskChange = (id: string) => {
     setCurrentTaskID(id);
   };
 
-  const selectionSection = allTasks ? (
-    Object.keys(allTasks).map((id) => (
+  const selectionSection = tasks ? (
+    Object.keys(tasks).map((id) => (
       <div
         key={id}
         className={`py-1 px-2 border border-gray-300 ${
@@ -27,7 +23,7 @@ const TaskSelection = ({
         }`}
         onClick={() => handleCurrentTaskChange(id)}
       >
-        {allTasks[id].name}
+        {tasks[id].name}
       </div>
     ))
   ) : (

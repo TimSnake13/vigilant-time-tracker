@@ -3,29 +3,28 @@ import { v4 as uuid } from "uuid";
 export class Task {
   id: string;
   name: string;
-  category: string;
+  categoryID?: string;
   description?: string;
-  constructor(name: string, category: string, description?: string) {
+  constructor(name: string, categoryID?: string, description?: string) {
     this.id = uuid();
     this.name = name;
-    this.category = category;
-    this.description = description || "";
+    this.categoryID = categoryID ? categoryID : "";
+    this.description = description ? description : "";
   }
 }
 
 export class Activity {
-  task: Task;
+  taskID: string;
   startMoment: Moment;
   finishMoment: Moment;
-  // duration: number[];
   duration: number;
   constructor(
-    task: Task,
+    taskID: string,
     startMoment: Moment,
     finishMoment: Moment,
     duration: number
   ) {
-    this.task = task;
+    this.taskID = taskID;
     this.startMoment = startMoment;
     this.finishMoment = finishMoment;
     this.duration = duration;
@@ -33,7 +32,8 @@ export class Activity {
 }
 
 /**
- * When initializing, it needs the input: moment().format("YYYY-MM-DD HH:mm:ss A") to work properly
+ * When initializing,
+ * it needs the input: moment().format("YYYY-MM-DD HH:mm:ss A") to work properly
  */
 export class Moment {
   moment: string;

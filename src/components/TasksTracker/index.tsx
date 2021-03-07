@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ClockDisplay from "../ClockDisplay";
 import moment from "moment";
 import { Moment, Task, Activity } from "./types";
@@ -10,6 +10,9 @@ import AddCategory from "./AddCategory";
 import DayVisualization from "./DayVisualization";
 import TaskSelection from "./TaskSelection";
 import { Counter } from "./Counter";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { addTask } from "../../redux/tasksSlice";
+import { addActivity } from "../../redux/activitiesSlice";
 
 const LOCAL_STORAGE_KEY = "USER_DATA";
 const START_TIMER_ON_RENDER = true;
@@ -25,26 +28,30 @@ interface UserData {
 }
 
 const TasksTracker = () => {
+  const getCurrentMoment = () => new Moment(moment().format(FORMAT_STYLE));
+
   const inputRef = useRef<HTMLInputElement>();
   const [isStarted, setIsStarted] = useState(false);
 
-  const [todaysActivities, setTodaysActivities] = useState<Activity[]>([]);
-  const [allActivities, setAllActivities] = useState<
-    Record<string, Activity[]>
-  >({});
-
+  // const [todaysActivities, setTodaysActivities] = useState<Activity[]>([]);
+  // const [allActivities, setAllActivities] = useState<
+  //   Record<string, Activity[]>
+  // >({});
+  const date = getCurrentMoment().date;
+  const dispatch = useAppDispatch();
+  const allActivities = useAppSelector((state) => state.activities);
+  const todaysActivities = allActivities[date];
+  const tasks = useAppSelector((state) => state.tasks);
   const [currentTaskID, setCurrentTaskID] = useState<string>("");
-  const [allTasks, setAllTasks] = useState<Record<string, Task>>({});
+  // const [allTasks, setAllTasks] = useState<Record<string, Task>>({});
 
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategoryID, setSelectedCategory] = useState("");
 
   const [currentMoment, setCurrentMoment] = useState<Moment>();
   const [startMoment, setStartMoment] = useState<Moment>();
   const [stopMoment, setStopMoment] = useState<Moment>();
   const [passedTime, setPassedTime] = useState(0); // In mins
-
-  const getCurrentMoment = () => new Moment(moment().format(FORMAT_STYLE));
 
   useInterval(() => {
     setCurrentMoment(getCurrentMoment());
@@ -56,10 +63,10 @@ const TasksTracker = () => {
     const obj = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) as UserData;
     if (obj) {
       setCategories(obj.categories);
-      setAllActivities(obj.allActivities);
+      // setAllActivities(obj.allActivities);
       const today = new Moment(moment().format(FORMAT_STYLE)).date;
-      if (today && obj.allActivities[today])
-        setTodaysActivities(obj.allActivities[today]);
+      // if (today && obj.allActivities[today])
+      // setTodaysActivities(obj.allActivities[today]);
       if (obj.startMoment) {
         setStartMoment(obj.startMoment);
       } else {
@@ -131,15 +138,17 @@ const TasksTracker = () => {
   const addCategory = (name: string) => {
     if (name) {
       if (categories.indexOf(name) < 0) {
-        setCategories((s) => {
-          const newCategories = [...s, name];
-          updateDataInLocalStorage({
-            startMoment,
-            categories: newCategories,
-            allActivities,
-          });
-          return newCategories;
-        });
+        // setCategories((s) => {
+        //   const newCategories = [...s, name];
+        //   updateDataInLocalStorage({
+        //     startMoment,
+        //     categories: newCategories,
+        //     allActivities,
+        //   });
+        //   return newCategories;
+        // });
+        console.warn("Using unfinished addCategory()");
+
         setSelectedCategory(name);
       } else {
         console.warn("Repeated category, skip add");
@@ -153,49 +162,17 @@ const TasksTracker = () => {
    */
   const AddTodaysActivity = () => {
     // TODO: check user have selected or create a task
-    const newTask = new Task(inputRef.current.value, selectedCategory);
+    const newTask = new Task(inputRef.current.value, selectedCategoryID);
+    dispatch(addTask({ task: newTask }));
     const newActivity = new Activity(
-      newTask,
+      newTask.id,
       startMoment,
       stopMoment,
       passedTime
     );
-    setTodaysActivities((arr) => {
-      const newTodaysActivities = [...arr, newActivity];
-      saveOneDayActivities({
-        dateAllTasks: newTodaysActivities,
-        userData: { startMoment: currentMoment, categories, allActivities },
-      }); // Prevent race condition
-      return newTodaysActivities;
-    });
+    dispatch(addActivity({ date, activity: newActivity }));
     setStartMoment(currentMoment);
     inputRef.current.value = "";
-  };
-
-  interface saveOneDayActivitiesProps {
-    date?: string;
-    dateAllTasks?: Activity[];
-    userData: UserData;
-  }
-
-  const saveOneDayActivities = ({
-    date = currentMoment.date,
-    dateAllTasks = todaysActivities,
-    userData,
-  }: saveOneDayActivitiesProps) => {
-    setAllActivities((tasks) => {
-      const newAllActivities = { ...tasks, [date]: dateAllTasks };
-      updateDataInLocalStorage({
-        startMoment: userData.startMoment,
-        categories: userData.categories,
-        allActivities: newAllActivities,
-      });
-      return newAllActivities;
-    });
-  };
-
-  const updateDataInLocalStorage = (userData: UserData) => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userData));
   };
 
   return (
@@ -208,7 +185,7 @@ const TasksTracker = () => {
       <button onClick={handleToggleIsStarted}>
         {isStarted ? "Stop" : "Start"}
       </button>
-      <button
+      {/* <button
         onClick={() =>
           updateDataInLocalStorage({
             allTasks,
@@ -219,7 +196,7 @@ const TasksTracker = () => {
         }
       >
         Dev: Save data to LS
-      </button>
+      </button> */}
       <div>Start At: {startMoment?.time}</div>
       <PassedTimeDisplay passedTime={passedTime} />
 
@@ -227,7 +204,7 @@ const TasksTracker = () => {
       <CategoriesSelection
         categories={categories}
         setCategories={setCategories}
-        selectedCategory={selectedCategory}
+        selectedCategory={selectedCategoryID}
         setSelectedCategory={setSelectedCategory}
       />
       <AddCategory addCategory={addCategory} />
@@ -237,7 +214,7 @@ const TasksTracker = () => {
         <TaskSelection
           currentTaskID={currentTaskID}
           setCurrentTaskID={setCurrentTaskID}
-          allTasks={allTasks}
+          tasks={tasks}
         />
         <button
           onClick={AddTodaysActivity}
