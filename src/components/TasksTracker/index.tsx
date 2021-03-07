@@ -3,11 +3,13 @@ import ClockDisplay from "../ClockDisplay";
 import moment from "moment";
 import { Moment, Task, Activity } from "./types";
 import TasksDisplay from "./TasksDisplay/";
-import useInterval from "../../hooks/useInterval";
+import useInterval from "../../utils/useInterval";
 import PassedTimeDisplay from "./PassedTimeDisplay";
 import CategoriesSelection from "./CategoriesSelection";
 import AddCategory from "./AddCategory";
 import DayVisualization from "./DayVisualization";
+import TaskSelection from "./TaskSelection";
+import { Counter } from "./Counter";
 
 const LOCAL_STORAGE_KEY = "USER_DATA";
 const START_TIMER_ON_RENDER = true;
@@ -18,7 +20,8 @@ const FORMAT_STYLE = "YYYY-MM-DD HH:mm:ss A";
 interface UserData {
   startMoment: Moment;
   categories: string[];
-  allActivities: any;
+  allTasks: Record<string, Task>;
+  allActivities: Record<string, Activity[]>;
 }
 
 const TasksTracker = () => {
@@ -30,13 +33,15 @@ const TasksTracker = () => {
     Record<string, Activity[]>
   >({});
 
+  const [currentTaskID, setCurrentTaskID] = useState<string>("");
+  const [allTasks, setAllTasks] = useState<Record<string, Task>>({});
+
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const [currentMoment, setCurrentMoment] = useState<Moment>();
   const [startMoment, setStartMoment] = useState<Moment>();
   const [stopMoment, setStopMoment] = useState<Moment>();
-  // const [passedTime, setPassedTime] = useState([0, 0, 0]);
   const [passedTime, setPassedTime] = useState(0); // In mins
 
   const getCurrentMoment = () => new Moment(moment().format(FORMAT_STYLE));
@@ -195,6 +200,7 @@ const TasksTracker = () => {
 
   return (
     <div>
+      <Counter />
       <ClockDisplay
         currentDate={currentMoment?.date}
         currentTime={currentMoment?.time}
@@ -204,7 +210,12 @@ const TasksTracker = () => {
       </button>
       <button
         onClick={() =>
-          updateDataInLocalStorage({ startMoment, categories, allActivities })
+          updateDataInLocalStorage({
+            allTasks,
+            startMoment,
+            categories,
+            allActivities,
+          })
         }
       >
         Dev: Save data to LS
@@ -222,7 +233,12 @@ const TasksTracker = () => {
       <AddCategory addCategory={addCategory} />
       <h2>My Activities:</h2>
       <div>
-        <input ref={inputRef} placeholder="My finished task is?" />
+        <input ref={inputRef} placeholder="My new finished task is?" />
+        <TaskSelection
+          currentTaskID={currentTaskID}
+          setCurrentTaskID={setCurrentTaskID}
+          allTasks={allTasks}
+        />
         <button
           onClick={AddTodaysActivity}
           disabled={!isStarted || stopMoment !== null}

@@ -1,5 +1,5 @@
 import React from "react";
-import useMeasure from "../../../hooks/useMeasure";
+import useMeasure from "../../../utils/useMeasure";
 import { Activity } from "../types";
 import ActivityBlock from "./ActivityBlock";
 
