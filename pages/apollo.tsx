@@ -2,7 +2,7 @@ import { gql, useQuery } from "@apollo/client";
 import React, { useEffect } from "react";
 
 const GET_TITLE = gql`
-  query GetTitles {
+  query GetAllBooks {
     books {
       title
       author
@@ -11,7 +11,6 @@ const GET_TITLE = gql`
 `;
 
 const apollo = () => {
-  console.log(process.env.SERVER_ADDRESS);
   const { loading, error, data } = useQuery(GET_TITLE);
 
   if (loading) return <p>Loading...</p>;
